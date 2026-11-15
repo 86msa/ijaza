@@ -1,5 +1,6 @@
-// رقم واتساب المدير الذي تصله الطلبات (مع رمز الدولة، أرقام فقط)
-const MANAGER_PHONE = '966500000000';
+// رقم واتساب المدير الذي تصله الطلبات (مع رمز العراق 964، بدون الصفر)
+const MANAGER_PHONE = '9647700000000';
+const COUNTRY_CODE = '964';
 
 const form = document.getElementById('leaveForm');
 const daysEl = document.getElementById('days');
@@ -12,7 +13,15 @@ const today = new Date().toISOString().slice(0, 10);
 form.start.min = today;
 form.end.min = today;
 
-const digits = (s) => s.replace(/\D/g, '').replace(/^00/, '');
+// يحوّل الرقم المحلي العراقي إلى صيغة دولية: 07701234567 → 9647701234567
+// يقبل أيضًا الرقم إذا كُتب مع 964 أو +964 أو 00964
+function toIraqi(s) {
+  let d = s.replace(/[٠-٩]/g, (c) => '٠١٢٣٤٥٦٧٨٩'.indexOf(c)).replace(/\D/g, '');
+  d = d.replace(/^00/, '');
+  if (d.startsWith(COUNTRY_CODE)) d = d.slice(COUNTRY_CODE.length);
+  d = d.replace(/^0+/, '');
+  return /^7\d{9}$/.test(d) ? COUNTRY_CODE + d : null;
+}
 const waLink = (phone, text) => `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
 
 function countDays() {
@@ -39,9 +48,9 @@ form.addEventListener('submit', (e) => {
     form.reportValidity();
     return;
   }
-  const phone = digits(form.phone.value);
-  if (phone.length < 9) {
-    errorEl.textContent = 'رقم الواتساب غير صحيح. اكتبه مع رمز الدولة.';
+  const phone = toIraqi(form.phone.value);
+  if (!phone) {
+    errorEl.textContent = 'رقم الواتساب غير صحيح. اكتبه بهذا الشكل: 07701234567';
     return;
   }
   const days = countDays();
