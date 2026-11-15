@@ -4,61 +4,51 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>طلب إجازة</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;600;700&display=swap">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <main class="card">
   <h1>طلب إجازة</h1>
-  <p class="sub">املأ البيانات التالية وسيصل طلبك إلى الإدارة.</p>
+  <p class="sub">اكتب بياناتك ثم أرسل الطلب إلى المدير عبر واتساب.</p>
 
   <form id="leaveForm" novalidate>
-    <label>الاسم الكامل
-      <input type="text" name="name" required autocomplete="name">
+    <label for="name">اسم الموظف
+      <input type="text" id="name" name="name" required autocomplete="name">
     </label>
 
-    <div class="row">
-      <label>الرقم الوظيفي
-        <input type="text" name="empId" required inputmode="numeric">
-      </label>
-      <label>القسم
-        <input type="text" name="dept" required>
-      </label>
-    </div>
-
-    <label>نوع الإجازة
-      <select name="type" required>
-        <option value="">اختر...</option>
-        <option>إجازة سنوية</option>
-        <option>إجازة مرضية</option>
-        <option>إجازة طارئة</option>
-        <option>إجازة بدون راتب</option>
-        <option>أخرى</option>
-      </select>
+    <label for="phone">رقم واتساب الموظف
+      <input type="tel" id="phone" name="phone" required inputmode="tel" dir="ltr" placeholder="مثال: 9665XXXXXXXX">
+      <small>مع رمز الدولة، بدون + أو 00. يصلك عليه إشعار الموافقة.</small>
     </label>
 
-    <div class="row">
-      <label>من تاريخ
-        <input type="date" name="start" required>
-      </label>
-      <label>إلى تاريخ
-        <input type="date" name="end" required>
-      </label>
-    </div>
+    <fieldset>
+      <legend>تاريخ الإجازة</legend>
+      <div class="row">
+        <label for="start">من
+          <input type="date" id="start" name="start" required>
+        </label>
+        <label for="end">إلى
+          <input type="date" id="end" name="end" required>
+        </label>
+      </div>
+      <p class="days" id="days" aria-live="polite"></p>
+    </fieldset>
 
-    <p class="days" id="days" aria-live="polite"></p>
-
-    <label>السبب (اختياري)
-      <textarea name="reason" rows="3"></textarea>
+    <label for="reason">الغرض من الإجازة
+      <textarea id="reason" name="reason" rows="4" required></textarea>
     </label>
 
     <p class="error" id="error" role="alert"></p>
-    <button type="submit">إرسال الطلب</button>
+    <button type="submit">متابعة</button>
   </form>
 
   <section id="done" class="done" hidden>
-    <h2>تم تسجيل طلبك ✔</h2>
+    <h2>الطلب جاهز للإرسال</h2>
     <dl id="summary"></dl>
-    <button type="button" id="again">طلب جديد</button>
+    <a id="sendLink" class="btn wa" href="#" target="_blank" rel="noopener">إرسال الطلب للمدير عبر واتساب</a>
+    <p class="note">سيُفتح واتساب برسالة جاهزة، اضغط «إرسال» فيه.</p>
+    <button type="button" id="again" class="btn ghost">تعديل الطلب</button>
   </section>
 </main>
 <script src="script.js"></script>

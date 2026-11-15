@@ -1,13 +1,19 @@
+// رقم واتساب المدير الذي تصله الطلبات (مع رمز الدولة، أرقام فقط)
+const MANAGER_PHONE = '966500000000';
+
 const form = document.getElementById('leaveForm');
 const daysEl = document.getElementById('days');
 const errorEl = document.getElementById('error');
 const done = document.getElementById('done');
 const summary = document.getElementById('summary');
+const sendLink = document.getElementById('sendLink');
 
-// الحد الأدنى لتاريخ البداية هو اليوم
 const today = new Date().toISOString().slice(0, 10);
 form.start.min = today;
 form.end.min = today;
+
+const digits = (s) => s.replace(/\D/g, '').replace(/^00/, '');
+const waLink = (phone, text) => `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
 
 function countDays() {
   const { start, end } = form;
@@ -29,40 +35,48 @@ form.addEventListener('submit', (e) => {
   errorEl.textContent = '';
 
   if (!form.checkValidity()) {
-    errorEl.textContent = 'يرجى تعبئة جميع الحقول المطلوبة.';
+    errorEl.textContent = 'يرجى تعبئة جميع الحقول.';
     form.reportValidity();
+    return;
+  }
+  const phone = digits(form.phone.value);
+  if (phone.length < 9) {
+    errorEl.textContent = 'رقم الواتساب غير صحيح. اكتبه مع رمز الدولة.';
     return;
   }
   const days = countDays();
   if (!days) {
-    errorEl.textContent = 'تاريخ النهاية يجب أن يكون بعد تاريخ البداية.';
+    errorEl.textContent = 'تاريخ النهاية يجب أن يكون بعد تاريخ البداية أو مساويًا له.';
     return;
   }
 
-  const data = {
-    name: form.name.value.trim(),
-    empId: form.empId.value.trim(),
-    dept: form.dept.value.trim(),
-    type: form.type.value,
-    start: form.start.value,
-    end: form.end.value,
-    days,
-    reason: form.reason.value.trim(),
-    createdAt: new Date().toISOString(),
-  };
+  const name = form.name.value.trim();
+  const reason = form.reason.value.trim();
+  const period = form.start.value === form.end.value
+    ? form.start.value
+    : `من ${form.start.value} إلى ${form.end.value}`;
 
-  // حفظ مؤقت في المتصفح حتى يتم ربط الموقع بخادم
-  try {
-    const all = JSON.parse(localStorage.getItem('leaveRequests') || '[]');
-    all.push(data);
-    localStorage.setItem('leaveRequests', JSON.stringify(all));
-  } catch (_) {}
+  // رسائل جاهزة يرسلها المدير للموظف بضغطة واحدة
+  const approve = waLink(phone,
+    `مرحبًا ${name}،\nتمت الموافقة على طلب إجازتك ✅\nالتاريخ: ${period} (${days} يوم)`);
+  const reject = waLink(phone,
+    `مرحبًا ${name}،\nنعتذر، لم تتم الموافقة على طلب إجازتك ❌\nالتاريخ: ${period}`);
 
-  const rows = [
-    ['الاسم', data.name], ['الرقم الوظيفي', data.empId], ['القسم', data.dept],
-    ['النوع', data.type], ['من', data.start], ['إلى', data.end],
-    ['عدد الأيام', data.days],
-  ];
+  const managerMsg =
+`📝 طلب إجازة جديد
+الاسم: ${name}
+التاريخ: ${period} (${days} يوم)
+الغرض: ${reason}
+
+✅ للموافقة وإبلاغ الموظف:
+${approve}
+
+❌ للرفض:
+${reject}`;
+
+  sendLink.href = waLink(MANAGER_PHONE, managerMsg);
+
+  const rows = [['الاسم', name], ['التاريخ', period], ['عدد الأيام', days], ['الغرض', reason]];
   summary.replaceChildren();
   for (const [k, v] of rows) {
     const dt = document.createElement('dt'); dt.textContent = k;
@@ -74,8 +88,6 @@ form.addEventListener('submit', (e) => {
 });
 
 document.getElementById('again').addEventListener('click', () => {
-  form.reset();
-  daysEl.textContent = '';
   done.hidden = true;
   form.hidden = false;
 });
