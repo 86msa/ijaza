@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>طلب إجازة</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main class="card">
+  <h1>طلب إجازة</h1>
+  <p class="sub">اكتب بياناتك ثم أرسل الطلب إلى المدير عبر واتساب.</p>
+
+  <form id="leaveForm" novalidate>
+    <label for="name">اسم الموظف
+      <input type="text" id="name" name="name" required autocomplete="name">
+    </label>
+
+    <label for="phone">رقم واتساب الموظف
+      <input type="tel" id="phone" name="phone" required inputmode="tel" dir="ltr" placeholder="07XXXXXXXXX" maxlength="20">
+      <small>اكتب رقمك فقط، مثل 07701234567. يصلك عليه إشعار الموافقة.</small>
+    </label>
+
+    <fieldset>
+      <legend>تاريخ الإجازة</legend>
+      <div class="row">
+        <label for="start">من
+          <input type="date" id="start" name="start" required>
+        </label>
+        <label for="end">إلى
+          <input type="date" id="end" name="end" required>
+        </label>
+      </div>
+      <p class="days" id="days" aria-live="polite"></p>
+    </fieldset>
+
+    <label for="reason">الغرض من الإجازة
+      <textarea id="reason" name="reason" rows="4" required></textarea>
+    </label>
+
+    <p class="error" id="error" role="alert"></p>
+    <button type="submit">متابعة</button>
+  </form>
+
+  <section id="done" class="done" hidden>
+    <h2>الطلب جاهز للإرسال</h2>
+    <dl id="summary"></dl>
+    <a id="sendLink" class="btn wa" href="#" target="_blank" rel="noopener">إرسال الطلب للمدير عبر واتساب</a>
+    <p class="note">سيُفتح واتساب برسالة جاهزة، اضغط «إرسال» فيه.</p>
+    <button type="button" id="again" class="btn ghost">تعديل الطلب</button>
+  </section>
+</main>
+<script src="script.js"></script>
+</body>
+</html>
