@@ -1,8 +1,3 @@
-// رقم واتساب المدير الذي تصله الطلبات (مع رمز العراق 964، بدون الصفر)
-const MANAGER_PHONE = '9647812502400';
-const COUNTRY_CODE = '964';
-const REPLY_PAGE = 'https://86msa.github.io/ijaza/r.html';
-
 const form = document.getElementById('leaveForm');
 const daysEl = document.getElementById('days');
 const errorEl = document.getElementById('error');
@@ -69,7 +64,8 @@ form.addEventListener('submit', (e) => {
 
   // رابط قصير لصفحة الرد، فيها زرّا القبول والرفض
   const code = (d) => d.replaceAll('-', '');
-  const replyLink = `${REPLY_PAGE}#${phone.slice(COUNTRY_CODE.length)}-${code(form.start.value)}-${code(form.end.value)}`;
+  const id = Math.random().toString(36).slice(2, 10).padEnd(8, '0');
+  const replyLink = `${REPLY_PAGE}#${phone.slice(COUNTRY_CODE.length)}-${code(form.start.value)}-${code(form.end.value)}-${id}`;
 
   const managerMsg =
 `📝 *طلب إجازة جديد*
@@ -82,6 +78,12 @@ form.addEventListener('submit', (e) => {
 ${replyLink}`;
 
   sendLink.href = waLink(MANAGER_PHONE, managerMsg);
+  // يُحفظ الطلب في الجدول عند ضغط زر الإرسال
+  sendLink.onclick = () => saveToSheet({
+    action: 'new', id, name, reason,
+    phone: '0' + phone.slice(COUNTRY_CODE.length),
+    start: form.start.value, end: form.end.value,
+  });
 
   const rows = [['الاسم', name], ['التاريخ', period], ['عدد الأيام', days], ['الغرض', reason]];
   summary.replaceChildren();

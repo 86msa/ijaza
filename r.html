@@ -23,9 +23,10 @@
 
   <p id="bad" class="error" hidden>الرابط غير صحيح أو ناقص. افتحه كما وصلك في رسالة واتساب.</p>
 </main>
+<script src="config.js"></script>
 <script>
-  // صيغة الرابط: r.html#<رقم الموظف بدون 964 والصفر>-<من YYYYMMDD>-<إلى YYYYMMDD>
-  const m = location.hash.match(/^#(7\d{9})-(\d{8})-(\d{8})$/);
+  // صيغة الرابط: r.html#<رقم الموظف بدون 964 والصفر>-<من YYYYMMDD>-<إلى YYYYMMDD>-<رقم الطلب>
+  const m = location.hash.match(/^#(7\d{9})-(\d{8})-(\d{8})(?:-([a-z0-9]{6,20}))?$/);
   if (!m) {
     document.getElementById('bad').hidden = false;
   } else {
@@ -41,6 +42,13 @@
       wa(`مرحبًا،\nتمت الموافقة على طلب إجازتك ✅\nالتاريخ: ${period} (${days} يوم)`);
     document.getElementById('no').href =
       wa(`مرحبًا،\nنعتذر، لم تتم الموافقة على طلب إجازتك ❌\nالتاريخ: ${period}`);
+
+    // تسجيل القرار في الجدول
+    const id = m[4];
+    if (id) {
+      document.getElementById('yes').addEventListener('click', () => saveToSheet({ action: 'decide', id, status: 'approved' }));
+      document.getElementById('no').addEventListener('click', () => saveToSheet({ action: 'decide', id, status: 'rejected' }));
+    }
 
     const rows = [['رقم الموظف', '0' + m[1]], ['التاريخ', period], ['عدد الأيام', days]];
     const dl = document.getElementById('summary');
