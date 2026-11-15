@@ -1,6 +1,7 @@
 // رقم واتساب المدير الذي تصله الطلبات (مع رمز العراق 964، بدون الصفر)
 const MANAGER_PHONE = '9647812502400';
 const COUNTRY_CODE = '964';
+const REPLY_PAGE = 'https://86msa.github.io/ijaza/r.html';
 
 const form = document.getElementById('leaveForm');
 const daysEl = document.getElementById('days');
@@ -65,23 +66,19 @@ form.addEventListener('submit', (e) => {
     ? form.start.value
     : `من ${form.start.value} إلى ${form.end.value}`;
 
-  // رسائل جاهزة يرسلها المدير للموظف بضغطة واحدة
-  const approve = waLink(phone,
-    `مرحبًا ${name}،\nتمت الموافقة على طلب إجازتك ✅\nالتاريخ: ${period} (${days} يوم)`);
-  const reject = waLink(phone,
-    `مرحبًا ${name}،\nنعتذر، لم تتم الموافقة على طلب إجازتك ❌\nالتاريخ: ${period}`);
+  // رابط قصير لصفحة الرد، فيها زرّا القبول والرفض
+  const code = (d) => d.replaceAll('-', '');
+  const replyLink = `${REPLY_PAGE}#${phone.slice(COUNTRY_CODE.length)}-${code(form.start.value)}-${code(form.end.value)}`;
 
   const managerMsg =
-`📝 طلب إجازة جديد
-الاسم: ${name}
-التاريخ: ${period} (${days} يوم)
-الغرض: ${reason}
+`📝 *طلب إجازة جديد*
 
-✅ للموافقة وإبلاغ الموظف:
-${approve}
+👤 الاسم: ${name}
+📅 التاريخ: ${period} (${days} يوم)
+📌 الغرض: ${reason}
 
-❌ للرفض:
-${reject}`;
+للقبول ✅ أو الرفض ❌ اضغط هنا:
+${replyLink}`;
 
   sendLink.href = waLink(MANAGER_PHONE, managerMsg);
 
