@@ -23,6 +23,7 @@ function toIraqi(s) {
   d = d.replace(/^0+/, '');
   return /^7\d{9}$/.test(d) ? COUNTRY_CODE + d : null;
 }
+const ltr = (s) => `\u2066${s}\u2069`;
 const waLink = (phone, text) => `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
 
 function countDays() {
@@ -63,8 +64,8 @@ form.addEventListener('submit', (e) => {
   const name = form.name.value.trim();
   const reason = form.reason.value.trim();
   const period = form.start.value === form.end.value
-    ? form.start.value
-    : `من ${form.start.value} إلى ${form.end.value}`;
+    ? ltr(form.start.value)
+    : `من ${ltr(form.start.value)} إلى ${ltr(form.end.value)}`;
 
   // رابط قصير لصفحة الرد، فيها زرّا القبول والرفض
   const code = (d) => d.replaceAll('-', '');
