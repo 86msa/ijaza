@@ -1,5 +1,5 @@
 // رقم واتساب المدير الذي تصله الطلبات (مع رمز العراق 964، بدون الصفر)
-const MANAGER_PHONE = '9647700000000';
+const MANAGER_PHONE = '9647812502400';
 const COUNTRY_CODE = '964';
 
 const form = document.getElementById('leaveForm');
