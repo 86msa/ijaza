@@ -4,7 +4,7 @@
 const MANAGER_PHONE = '9647812502400';
 const COUNTRY_CODE = '964';
 // ?v= يجبر الجوال على فتح أحدث نسخة من الصفحة بدل نسخة محفوظة قديمة
-const REPLY_PAGE = 'https://86msa.github.io/ijaza/r.html?v=5';
+const REPLY_PAGE = 'https://86msa.github.io/ijaza/r.html?v=6';
 
 // رابط Google Apps Script (Web app) الذي يحفظ الطلبات في «سجل الإجازات».
 // إذا كان فارغًا يعمل الموقع بدون حفظ.
