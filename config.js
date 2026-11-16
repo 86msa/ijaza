@@ -7,7 +7,7 @@ const REPLY_PAGE = 'https://86msa.github.io/ijaza/r.html';
 
 // رابط Google Apps Script (Web app) الذي يحفظ الطلبات في «سجل الإجازات».
 // إذا كان فارغًا يعمل الموقع بدون حفظ.
-const SHEET_URL = '';
+const SHEET_URL = 'https://script.google.com/macros/s/AKfycbwPDeZjSn2_91sPzRT_6Lcd7DH7nI0XUKksWKECVVPa7LZA54WGn-ReTxMUD52oO_tw/exec';
 
 // يرسل بيانات إلى الجدول بدون انتظار الرد
 function saveToSheet(data) {

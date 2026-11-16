@@ -21,8 +21,11 @@ function doPost(e) {
       if (!start || !end || end < start) return out('bad dates');
       const days = Math.round((end - start) / 86400000) + 1;
       const phone = String(d.phone || '').replace(/\D/g, '').slice(0, 15);
-      sh.appendRow(["'" + id, new Date(), clean(d.name, 80), "'" + phone,
-        start, end, days, clean(d.reason, 500), STATUS.pending, '']);
+      // setValues بدل appendRow حتى يبقى تنسيق التاريخ الذي في الجدول
+      const row = sh.getLastRow() + 1;
+      if (row > sh.getMaxRows()) sh.insertRowsAfter(sh.getMaxRows(), 100);
+      sh.getRange(row, 1, 1, 10).setValues([["'" + id, new Date(), clean(d.name, 80), "'" + phone,
+        start, end, days, clean(d.reason, 500), STATUS.pending, '']]);
       return out('ok');
     }
 
