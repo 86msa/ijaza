@@ -16,6 +16,23 @@ function doPost(e) {
     lock.waitLock(10000);
     const d = JSON.parse(e.postData.contents);
     const sh = SpreadsheetApp.getActive().getSheetByName(SHEET_NAME);
+
+    // قائمة الطلبات المعلّقة لصفحة المدير (تحتاج الرمز السري)
+    if (d.action === 'list') {
+      const pinError = checkPin(d.pin);
+      if (pinError) return out(pinError);
+      const n = sh.getLastRow() - 1;
+      if (n < 1) return out('[]');
+      const tz = SpreadsheetApp.getActive().getSpreadsheetTimeZone();
+      const fmt = (x, p) => x instanceof Date ? Utilities.formatDate(x, tz, p) : String(x);
+      const list = sh.getRange(2, 1, n, 9).getValues()
+        .filter((v) => v[0] && v[8] === STATUS.pending)
+        .map((v) => ({ id: String(v[0]), created: fmt(v[1], 'yyyy-MM-dd HH:mm'), name: String(v[2]),
+          phone: String(v[3]), start: fmt(v[4], 'yyyy-MM-dd'), end: fmt(v[5], 'yyyy-MM-dd'),
+          days: Number(v[6]), reason: String(v[7]) }));
+      return out(JSON.stringify(list));
+    }
+
     const id = String(d.id || '');
     if (!/^[a-z0-9]{6,20}$/.test(id)) return out('bad id');
 
@@ -48,9 +65,8 @@ function doPost(e) {
     }
 
     if (d.action === 'decide') {
-      if (MANAGER_PIN === 'ضع_رمزك_هنا' || String(MANAGER_PIN).length < 4) return out('pin not set');
-      if (tooManyFails()) return out('locked');
-      if (String(d.pin || '') !== String(MANAGER_PIN)) { addFail(); return out('bad pin'); }
+      const pinError = checkPin(d.pin);
+      if (pinError) return out(pinError);
       const status = d.status === 'approved' ? STATUS.approved
         : d.status === 'rejected' ? STATUS.rejected : null;
       const row = findRow(sh, id);
@@ -68,6 +84,14 @@ function doPost(e) {
   } finally {
     lock.releaseLock();
   }
+}
+
+// يتحقق من الرمز السري، ويرجع سبب الرفض أو null إذا كان صحيحًا
+function checkPin(pin) {
+  if (MANAGER_PIN === 'ضع_رمزك_هنا' || String(MANAGER_PIN).length < 4) return 'pin not set';
+  if (tooManyFails()) return 'locked';
+  if (String(pin || '') !== String(MANAGER_PIN)) { addFail(); return 'bad pin'; }
+  return null;
 }
 
 // حماية من تجربة الرموز: بعد 10 محاولات خاطئة خلال ساعة تتوقف القرارات مؤقتًا
