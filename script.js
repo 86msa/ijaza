@@ -5,7 +5,9 @@ const done = document.getElementById('done');
 const summary = document.getElementById('summary');
 const sendLink = document.getElementById('sendLink');
 
-const today = new Date().toISOString().slice(0, 10);
+// تاريخ اليوم بالتوقيت المحلي (toISOString يعطي توقيت غرينتش فيكون أحيانًا تاريخ الأمس)
+const now = new Date();
+const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 form.start.min = today;
 form.end.min = today;
 
@@ -40,9 +42,14 @@ form.addEventListener('submit', (e) => {
   e.preventDefault();
   errorEl.textContent = '';
 
-  if (!form.checkValidity()) {
+  const name = form.name.value.trim().replace(/\s+/g, ' ');
+  const reason = form.reason.value.trim();
+  if (!name || !form.phone.value.trim() || !form.start.value || !form.end.value || !reason) {
     errorEl.textContent = 'يرجى تعبئة جميع الحقول.';
-    form.reportValidity();
+    return;
+  }
+  if (form.start.value < today) {
+    errorEl.textContent = 'تاريخ البداية لا يمكن أن يكون قبل اليوم.';
     return;
   }
   const phone = toIraqi(form.phone.value);
@@ -56,8 +63,6 @@ form.addEventListener('submit', (e) => {
     return;
   }
 
-  const name = form.name.value.trim();
-  const reason = form.reason.value.trim();
   const period = form.start.value === form.end.value
     ? ltr(form.start.value)
     : `من ${ltr(form.start.value)} إلى ${ltr(form.end.value)}`;

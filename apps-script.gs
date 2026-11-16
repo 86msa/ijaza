@@ -12,12 +12,23 @@ const STATUS = { pending: 'قيد الانتظار', approved: 'مقبولة', r
 
 function doPost(e) {
   const lock = LockService.getScriptLock();
-  lock.waitLock(10000);
   try {
+    lock.waitLock(10000);
     const d = JSON.parse(e.postData.contents);
     const sh = SpreadsheetApp.getActive().getSheetByName(SHEET_NAME);
     const id = String(d.id || '');
     if (!/^[a-z0-9]{6,20}$/.test(id)) return out('bad id');
+
+    // بيانات الطلب كما سُجّلت في الجدول، لتعرضها صفحة الرد بدل ما في رسالة واتساب
+    if (d.action === 'get') {
+      const row = findRow(sh, id);
+      if (!row) return out('not found');
+      const v = sh.getRange(row, 1, 1, 9).getValues()[0];
+      const tz = SpreadsheetApp.getActive().getSpreadsheetTimeZone();
+      const day = (x) => x instanceof Date ? Utilities.formatDate(x, tz, 'yyyy-MM-dd') : String(x);
+      return out(JSON.stringify({ name: String(v[2]), phone: String(v[3]), start: day(v[4]),
+        end: day(v[5]), days: Number(v[6]), reason: String(v[7]), status: String(v[8]) }));
+    }
 
     if (d.action === 'new') {
       if (findRow(sh, id)) return out('exists');
@@ -25,7 +36,9 @@ function doPost(e) {
       const end = toDate(d.end);
       if (!start || !end || end < start) return out('bad dates');
       const days = Math.round((end - start) / 86400000) + 1;
-      const phone = String(d.phone || '').replace(/\D/g, '').slice(0, 15);
+      const phone = String(d.phone || '').replace(/\D/g, '');
+      if (!/^07\d{9}$/.test(phone)) return out('bad phone');
+      if (!String(d.name || '').trim()) return out('bad name');
       // setValues بدل appendRow حتى يبقى تنسيق التاريخ الذي في الجدول
       const row = sh.getLastRow() + 1;
       if (row > sh.getMaxRows()) sh.insertRowsAfter(sh.getMaxRows(), 100);

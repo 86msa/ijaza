@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#eef2f7">
 <title>طلب إجازة</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;600;700&display=swap">
-<link rel="stylesheet" href="style.css?v=5">
+<link rel="stylesheet" href="style.css?v=6">
 </head>
 <body>
 <main class="card">
@@ -16,7 +16,7 @@
   <form id="leaveForm" novalidate>
     <label class="field" for="name">
       <span>اسم الموظف</span>
-      <input type="text" id="name" name="name" required autocomplete="name">
+      <input type="text" id="name" name="name" required autocomplete="name" maxlength="80">
     </label>
 
     <label class="field" for="phone">
@@ -42,7 +42,7 @@
 
     <label class="field" for="reason">
       <span>الغرض من الإجازة</span>
-      <textarea id="reason" name="reason" rows="4" required></textarea>
+      <textarea id="reason" name="reason" rows="4" required maxlength="500"></textarea>
     </label>
 
     <p class="error" id="error" role="alert"></p>
@@ -57,7 +57,7 @@
     <button type="button" id="again" class="btn ghost">تعديل الطلب</button>
   </section>
 </main>
-<script src="config.js?v=5"></script>
-<script src="script.js?v=5"></script>
+<script src="config.js?v=6"></script>
+<script src="script.js?v=6"></script>
 </body>
 </html>
