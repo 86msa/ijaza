@@ -2,7 +2,12 @@
 // يُلصق في: الإضافات (Extensions) ← Apps Script، ثم يُنشر كـ Web app.
 // يستقبل من الموقع طلبًا جديدًا، أو قرار القبول/الرفض، ويكتبه في تبويب «الطلبات».
 
+// ⚠️ اكتب رمزك السري هنا بين علامتي ' ' (6 أرقام أو أكثر).
+// لا يُقبل أي قرار قبول أو رفض بدون هذا الرمز.
+const MANAGER_PIN = 'ضع_رمزك_هنا';
+
 const SHEET_NAME = 'الطلبات';
+const MAX_FAILS = 10; // عدد المحاولات الخاطئة المسموح بها في الساعة
 const STATUS = { pending: 'قيد الانتظار', approved: 'مقبولة', rejected: 'مرفوضة' };
 
 function doPost(e) {
@@ -30,12 +35,16 @@ function doPost(e) {
     }
 
     if (d.action === 'decide') {
+      if (MANAGER_PIN === 'ضع_رمزك_هنا' || String(MANAGER_PIN).length < 4) return out('pin not set');
+      if (tooManyFails()) return out('locked');
+      if (String(d.pin || '') !== String(MANAGER_PIN)) { addFail(); return out('bad pin'); }
       const status = d.status === 'approved' ? STATUS.approved
         : d.status === 'rejected' ? STATUS.rejected : null;
       const row = findRow(sh, id);
       if (!row || !status) return out('not found');
       // القرار يُسجَّل مرة واحدة فقط
-      if (sh.getRange(row, 9).getValue() !== STATUS.pending) return out('already decided');
+      const current = sh.getRange(row, 9).getValue();
+      if (current !== STATUS.pending) return out('already:' + current);
       sh.getRange(row, 9, 1, 2).setValues([[status, new Date()]]);
       return out('ok');
     }
@@ -46,6 +55,18 @@ function doPost(e) {
   } finally {
     lock.releaseLock();
   }
+}
+
+// حماية من تجربة الرموز: بعد 10 محاولات خاطئة خلال ساعة تتوقف القرارات مؤقتًا
+function tooManyFails() {
+  const fails = JSON.parse(PropertiesService.getScriptProperties().getProperty('fails') || '[]');
+  return fails.filter((t) => Date.now() - t < 3600000).length >= MAX_FAILS;
+}
+function addFail() {
+  const props = PropertiesService.getScriptProperties();
+  const fails = JSON.parse(props.getProperty('fails') || '[]').filter((t) => Date.now() - t < 3600000);
+  fails.push(Date.now());
+  props.setProperty('fails', JSON.stringify(fails));
 }
 
 function findRow(sh, id) {

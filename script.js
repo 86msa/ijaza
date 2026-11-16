@@ -89,7 +89,7 @@ ${replyLink}`;
   summary.replaceChildren();
   for (const [k, v] of rows) {
     const dt = document.createElement('dt'); dt.textContent = k;
-    const dd = document.createElement('dd'); dd.textContent = v;
+    const dd = document.createElement('dd'); dd.textContent = String(v).replace(/-/g, '\u2011'); // شرطة لا تنكسر حتى لا ينقسم التاريخ
     summary.append(dt, dd);
   }
   form.hidden = true;

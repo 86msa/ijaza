@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex">
 <title>الرد على طلب إجازة</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;600;700&display=swap">
@@ -14,11 +14,29 @@
 
   <section id="ok" class="done" hidden>
     <dl id="summary"></dl>
-    <div class="actions">
-      <a id="yes" class="btn big yes" target="_blank" rel="noopener">✅ قبول</a>
-      <a id="no" class="btn big no" target="_blank" rel="noopener">❌ رفض</a>
+
+    <div id="choose" class="actions">
+      <button type="button" id="yes" class="btn big yes">✅ قبول</button>
+      <button type="button" id="no" class="btn big no">❌ رفض</button>
     </div>
-    <p class="note">سيُفتح واتساب على محادثة الموظف برسالة جاهزة، اضغط «إرسال» فيه.</p>
+
+    <form id="pinForm" class="done" hidden novalidate>
+      <label class="field" for="pin">
+        <span>الرمز السري للمدير</span>
+        <input type="password" id="pin" inputmode="numeric" autocomplete="current-password" dir="ltr" required>
+        <small class="hint">يُحفظ في هذا الجوال، فلا تحتاج كتابته مرة أخرى.</small>
+      </label>
+      <button type="submit" id="pinGo">تأكيد</button>
+      <button type="button" id="pinBack" class="btn ghost">رجوع</button>
+    </form>
+
+    <p id="status" class="note" aria-live="polite"></p>
+    <p id="error" class="error" role="alert"></p>
+
+    <div id="sendBox" class="done" hidden>
+      <a id="sendWa" class="btn wa" target="_blank" rel="noopener">إرسال القرار للموظف عبر واتساب</a>
+      <p class="note">سيُفتح واتساب على محادثة الموظف برسالة جاهزة، اضغط «إرسال» فيه.</p>
+    </div>
   </section>
 
   <p id="bad" class="error" hidden>الرابط غير صحيح أو ناقص. افتحه كما وصلك في رسالة واتساب.</p>
@@ -27,37 +45,127 @@
 <script>
   // صيغة الرابط: r.html#<رقم الموظف بدون 964 والصفر>-<من YYYYMMDD>-<إلى YYYYMMDD>-<رقم الطلب>
   const m = location.hash.match(/^#(7\d{9})-(\d{8})-(\d{8})(?:-([a-z0-9]{6,20}))?$/);
+  const $ = (id) => document.getElementById(id);
+
   if (!m) {
-    document.getElementById('bad').hidden = false;
+    $('bad').hidden = false;
   } else {
     const phone = '964' + m[1];
+    const id = m[4];
     const fmt = (s) => `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6)}`;
     const start = fmt(m[2]), end = fmt(m[3]);
     const days = Math.round((new Date(end) - new Date(start)) / 86400000) + 1;
-    const ltr = (s) => `\u2066${s}\u2069`;
+    const ltr = (s) => `⁦${s}⁩`;
     const period = start === end ? ltr(start) : `من ${ltr(start)} إلى ${ltr(end)}`;
     const wa = (t) => `https://wa.me/${phone}?text=${encodeURIComponent(t)}`;
-
-    document.getElementById('yes').href =
-      wa(`مرحبًا،\nتمت الموافقة على طلب إجازتك ✅\nالتاريخ: ${period} (${days} يوم)`);
-    document.getElementById('no').href =
-      wa(`مرحبًا،\nنعتذر، لم تتم الموافقة على طلب إجازتك ❌\nالتاريخ: ${period}`);
-
-    // تسجيل القرار في الجدول
-    const id = m[4];
-    if (id) {
-      document.getElementById('yes').addEventListener('click', () => saveToSheet({ action: 'decide', id, status: 'approved' }));
-      document.getElementById('no').addEventListener('click', () => saveToSheet({ action: 'decide', id, status: 'rejected' }));
-    }
+    const messages = {
+      approved: `مرحبًا،\nتمت الموافقة على طلب إجازتك ✅\nالتاريخ: ${period} (${days} يوم)`,
+      rejected: `مرحبًا،\nنعتذر، لم تتم الموافقة على طلب إجازتك ❌\nالتاريخ: ${period}`,
+    };
+    const label = { approved: 'القبول', rejected: 'الرفض' };
 
     const rows = [['رقم الموظف', '0' + m[1]], ['التاريخ', period], ['عدد الأيام', days]];
-    const dl = document.getElementById('summary');
     for (const [k, v] of rows) {
       const dt = document.createElement('dt'); dt.textContent = k;
-      const dd = document.createElement('dd'); dd.textContent = v;
-      dl.append(dt, dd);
+      const dd = document.createElement('dd'); dd.textContent = String(v).replace(/-/g, '\u2011'); // شرطة لا تنكسر حتى لا ينقسم التاريخ
+      $('summary').append(dt, dd);
     }
-    document.getElementById('ok').hidden = false;
+    $('ok').hidden = false;
+
+    const store = {
+      get() { try { return localStorage.getItem('managerPin') || ''; } catch (_) { return ''; } },
+      set(v) { try { localStorage.setItem('managerPin', v); } catch (_) {} },
+      clear() { try { localStorage.removeItem('managerPin'); } catch (_) {} },
+    };
+
+    let choice = null;
+
+    function showMessage(text, isError) {
+      $('status').textContent = isError ? '' : text;
+      $('error').textContent = isError ? text : '';
+    }
+
+    function showSend(status) {
+      $('choose').hidden = true;
+      $('pinForm').hidden = true;
+      $('sendWa').href = wa(messages[status]);
+      $('sendBox').hidden = false;
+    }
+
+    function askPin() {
+      $('choose').hidden = true;
+      $('pinForm').hidden = false;
+      $('pin').value = '';
+      $('pin').focus();
+    }
+
+    function backToChoice() {
+      $('pinForm').hidden = true;
+      $('choose').hidden = false;
+    }
+
+    async function decide(pin) {
+      showMessage('جارٍ تسجيل القرار…');
+      $('pinGo').disabled = true;
+      let res;
+      try {
+        const r = await fetch(SHEET_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ action: 'decide', id, status: choice, pin }),
+        });
+        res = (await r.text()).trim();
+      } catch (_) {
+        res = 'network';
+      }
+      $('pinGo').disabled = false;
+
+      if (res === 'ok') {
+        store.set(pin);
+        showMessage(`تم تسجيل ${label[choice]} في الجدول.`);
+        showSend(choice);
+      } else if (res === 'bad pin') {
+        store.clear();
+        showMessage('الرمز السري غير صحيح. اكتبه مرة أخرى.', true);
+        askPin();
+      } else if (res === 'locked') {
+        showMessage('محاولات خاطئة كثيرة. انتظر ساعة ثم حاول مرة أخرى.', true);
+        backToChoice();
+      } else if (res === 'pin not set') {
+        showMessage('لم يُضبط الرمز السري في Apps Script بعد.', true);
+        backToChoice();
+      } else if (res.startsWith('already:')) {
+        const current = res.slice(8);
+        const prev = current === 'مقبولة' ? 'approved' : current === 'مرفوضة' ? 'rejected' : null;
+        showMessage(`تم الرد على هذا الطلب سابقًا، والقرار المسجّل: ${current}.`, !prev);
+        if (prev) showSend(prev); else backToChoice();
+      } else if (res === 'not found') {
+        showMessage('لم يُعثر على هذا الطلب في الجدول.', true);
+        backToChoice();
+      } else {
+        showMessage('تعذّر الاتصال بالجدول. تأكد من الإنترنت وحاول مرة أخرى.', true);
+        backToChoice();
+      }
+    }
+
+    function onChoose(status) {
+      choice = status;
+      showMessage('');
+      // روابط قديمة بدون رقم طلب، أو الموقع غير مربوط بالجدول: إرسال مباشر
+      if (!id || !SHEET_URL) { showSend(status); return; }
+      const saved = store.get();
+      if (saved) decide(saved); else askPin();
+    }
+
+    $('yes').addEventListener('click', () => onChoose('approved'));
+    $('no').addEventListener('click', () => onChoose('rejected'));
+    $('pinBack').addEventListener('click', () => { showMessage(''); backToChoice(); });
+    $('pinForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const pin = $('pin').value.trim();
+      if (!pin) { showMessage('اكتب الرمز السري.', true); return; }
+      decide(pin);
+    });
   }
 </script>
 </body>
