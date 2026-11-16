@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>طلبات الإجازة المعلّقة</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="style.css?v=7">
+<style>
+  .head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .head button{width:auto;min-height:40px;padding:6px 14px;font-size:.9rem}
+  .list{display:flex;flex-direction:column;gap:16px;margin-top:20px}
+  .req{border:1px solid var(--border);border-radius:var(--radius);padding:16px;display:flex;flex-direction:column;gap:12px}
+  .req dl{margin:0}
+  .req .when{color:var(--muted);font-size:.8rem}
+  .empty{color:var(--muted);text-align:center;padding:24px 0}
+</style>
+</head>
+<body>
+<main class="card">
+  <div class="head">
+    <h1>الطلبات المعلّقة</h1>
+    <button type="button" id="refresh" class="btn ghost" hidden>تحديث</button>
+  </div>
+  <p class="sub">طلبات لم تُقبل أو تُرفض بعد، ومنها طلبات لم تصلك على واتساب.</p>
+
+  <form id="pinForm" class="done" hidden novalidate>
+    <label class="field" for="pin">
+      <span>الرمز السري للمدير</span>
+      <input type="password" id="pin" inputmode="numeric" autocomplete="current-password" dir="ltr" required>
+      <small class="hint">يُحفظ في هذا الجوال، فلا تحتاج كتابته مرة أخرى.</small>
+    </label>
+    <button type="submit" id="pinGo">دخول</button>
+  </form>
+
+  <p id="status" class="note" aria-live="polite"></p>
+  <p id="error" class="error" role="alert"></p>
+  <div id="list" class="list"></div>
+</main>
+<script src="config.js?v=7"></script>
+<script>
+  const $ = (id) => document.getElementById(id);
+  const ltr = (s) => `⁦${s}⁩`;
+  // تاريخ بشرطات لا تنكسر، ومعزول عن اتجاه النص العربي
+  const nb = (s) => ltr(String(s).replace(/-/g, '\u2011'));
+  const label = { approved: 'القبول', rejected: 'الرفض' };
+  const store = {
+    get() { try { return localStorage.getItem('managerPin') || ''; } catch (_) { return ''; } },
+    set(v) { try { localStorage.setItem('managerPin', v); } catch (_) {} },
+    clear() { try { localStorage.removeItem('managerPin'); } catch (_) {} },
+  };
+
+  function showMessage(text, isError) {
+    $('status').textContent = isError ? '' : text;
+    $('error').textContent = isError ? text : '';
+  }
+
+  async function callSheet(body) {
+    try {
+      const r = await fetch(SHEET_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(body),
+      });
+      return (await r.text()).trim();
+    } catch (_) {
+      return 'network';
+    }
+  }
+
+  // رسالة خطأ مفهومة لكل رد من Apps Script
+  function explain(res) {
+    if (res === 'bad pin') return 'الرمز السري غير صحيح.';
+    if (res === 'locked') return 'محاولات خاطئة كثيرة. انتظر ساعة ثم حاول مرة أخرى.';
+    if (res === 'pin not set') return 'لم يُضبط الرمز السري في Apps Script بعد.';
+    if (res === 'unknown action') return 'حدّث كود Apps Script لتعمل هذه الصفحة.';
+    if (res === 'network') return 'تعذّر الاتصال بالجدول. تأكد من الإنترنت وحاول مرة أخرى.';
+    return 'حدث خطأ غير متوقع. حاول مرة أخرى.';
+  }
+
+  function askPin(message) {
+    store.clear();
+    $('list').replaceChildren();
+    $('refresh').hidden = true;
+    $('pinForm').hidden = false;
+    $('pin').value = '';
+    if (message) showMessage(message, true);
+  }
+
+  function waLink(req, status) {
+    const period = req.start === req.end ? ltr(req.start) : `من ${ltr(req.start)} إلى ${ltr(req.end)}`;
+    const text = status === 'approved'
+      ? `مرحبًا،\nتمت الموافقة على طلب إجازتك ✅\nالتاريخ: ${period} (${req.days} يوم)`
+      : `مرحبًا،\nنعتذر، لم تتم الموافقة على طلب إجازتك ❌\nالتاريخ: ${period}`;
+    return `https://wa.me/${COUNTRY_CODE}${req.phone.replace(/^0/, '')}?text=${encodeURIComponent(text)}`;
+  }
+
+  function el(tag, cls, text) {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+
+  function card(req, pin) {
+    const box = el('article', 'req');
+    const dl = el('dl');
+    const period = req.start === req.end ? nb(req.start) : `من ${nb(req.start)} إلى ${nb(req.end)}`;
+    for (const [k, v] of [['الموظف', req.name], ['الرقم', req.phone], ['التاريخ', period],
+      ['عدد الأيام', req.days], ['الغرض', req.reason]]) {
+      dl.append(el('dt', null, k), el('dd', null, v));
+    }
+    const when = el('p', 'when', `أُرسل: ${nb(req.created)}`);
+    const actions = el('div', 'actions');
+    const yes = el('button', 'btn yes', '✅ قبول'); yes.type = 'button';
+    const no = el('button', 'btn no', '❌ رفض'); no.type = 'button';
+    actions.append(yes, no);
+    const msg = el('p', 'note');
+    box.append(dl, when, actions, msg);
+
+    async function decide(status) {
+      yes.disabled = no.disabled = true;
+      msg.textContent = 'جارٍ تسجيل القرار…';
+      const res = await callSheet({ action: 'decide', id: req.id, status, pin });
+      if (res === 'ok' || res.startsWith('already:')) {
+        const recorded = res === 'ok' ? status
+          : res.slice(8) === 'مقبولة' ? 'approved' : res.slice(8) === 'مرفوضة' ? 'rejected' : null;
+        msg.textContent = res === 'ok'
+          ? `تم تسجيل ${label[status]}.`
+          : `تم الرد على هذا الطلب سابقًا، والقرار المسجّل: ${res.slice(8)}.`;
+        actions.remove();
+        if (recorded) {
+          const a = el('a', 'btn wa', 'إرسال القرار للموظف عبر واتساب');
+          a.href = waLink(req, recorded); a.target = '_blank'; a.rel = 'noopener';
+          box.append(a);
+        }
+      } else if (res === 'bad pin' || res === 'locked' || res === 'pin not set') {
+        askPin(explain(res));
+      } else {
+        msg.textContent = res === 'not found' ? 'لم يُعثر على هذا الطلب في الجدول.' : explain(res);
+        yes.disabled = no.disabled = false;
+      }
+    }
+    yes.addEventListener('click', () => decide('approved'));
+    no.addEventListener('click', () => decide('rejected'));
+    return box;
+  }
+
+  async function load(pin) {
+    $('pinForm').hidden = true;
+    $('pinGo').disabled = true;
+    showMessage('جارٍ تحميل الطلبات…');
+    const res = await callSheet({ action: 'list', pin });
+    $('pinGo').disabled = false;
+    let list = null;
+    try { list = JSON.parse(res); } catch (_) {}
+    if (!Array.isArray(list)) {
+      if (res === 'bad pin' || res === 'locked' || res === 'pin not set') askPin(explain(res));
+      else { showMessage(explain(res), true); $('refresh').hidden = false; }
+      return;
+    }
+    store.set(pin);
+    $('refresh').hidden = false;
+    showMessage(list.length ? `عدد الطلبات المعلّقة: ${list.length}` : '');
+    $('list').replaceChildren(...(list.length
+      ? list.map((r) => card(r, pin))
+      : [el('p', 'empty', 'لا توجد طلبات معلّقة.')]));
+  }
+
+  $('pinForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const pin = $('pin').value.trim();
+    if (!pin) { showMessage('اكتب الرمز السري.', true); return; }
+    load(pin);
+  });
+  $('refresh').addEventListener('click', () => {
+    const pin = store.get();
+    if (pin) load(pin); else askPin();
+  });
+
+  if (!SHEET_URL) showMessage('الموقع غير مربوط بالجدول.', true);
+  else if (store.get()) load(store.get());
+  else askPin();
+</script>
+</body>
+</html>
