@@ -3,7 +3,8 @@
 // رقم واتساب المدير الذي تصله الطلبات (مع رمز العراق 964، بدون الصفر)
 const MANAGER_PHONE = '9647812502400';
 const COUNTRY_CODE = '964';
-const REPLY_PAGE = 'https://86msa.github.io/ijaza/r.html';
+// ?v= يجبر الجوال على فتح أحدث نسخة من الصفحة بدل نسخة محفوظة قديمة
+const REPLY_PAGE = 'https://86msa.github.io/ijaza/r.html?v=5';
 
 // رابط Google Apps Script (Web app) الذي يحفظ الطلبات في «سجل الإجازات».
 // إذا كان فارغًا يعمل الموقع بدون حفظ.

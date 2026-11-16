@@ -6,7 +6,7 @@
 <meta name="robots" content="noindex">
 <title>الرد على طلب إجازة</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;600;700&display=swap">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=5">
 </head>
 <body>
 <main class="card">
@@ -41,7 +41,7 @@
 
   <p id="bad" class="error" hidden>الرابط غير صحيح أو ناقص. افتحه كما وصلك في رسالة واتساب.</p>
 </main>
-<script src="config.js"></script>
+<script src="config.js?v=5"></script>
 <script>
   // صيغة الرابط: r.html#<رقم الموظف بدون 964 والصفر>-<من YYYYMMDD>-<إلى YYYYMMDD>-<رقم الطلب>
   const m = location.hash.match(/^#(7\d{9})-(\d{8})-(\d{8})(?:-([a-z0-9]{6,20}))?$/);
